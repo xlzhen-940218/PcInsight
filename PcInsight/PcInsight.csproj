@@ -1,0 +1,161 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0-windows10.0.26100.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
+    <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
+    <RootNamespace>PcInsight</RootNamespace>
+    <AssemblyName>PcInsight</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Platforms>x64;ARM64</Platforms>
+    <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+    <UseWinUI>true</UseWinUI>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+    <!-- 免安装绿色版：不打包 MSIX，自包含 Windows App SDK 运行时，双击即可运行 -->
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <SelfContained>true</SelfContained>
+    <!-- Needed by the Windows App SDK single-file targets (embedded resources.pri); it does
+         not switch the app to MSIX packaging — WindowsPackageType=None stays in control. -->
+    <EnableMsixTooling>true</EnableMsixTooling>
+
+    <!-- Single-file green build: embed the native runtime as well and compress the bundle. -->
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+
+    <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
+
+    <!--
+      ILLink trimming removes roughly half the payload (about 86 MB -> 35 MB for the single-file
+      build). TrimMode=partial keeps assemblies that are not explicitly opted in, which is what
+      WinUI 3 and the C#/WinRT projections need; JSON export goes through the source-generated
+      PcInsightJsonContext because reflection-based serialisation is trimmed away.
+    -->
+    <PublishTrimmed Condition="'$(Configuration)' == 'Release'">true</PublishTrimmed>
+    <TrimMode>partial</TrimMode>
+    <TrimUnusedDependencies>false</TrimUnusedDependencies>
+    <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
+    <IlcGenerateCompleteTypeMetadata>true</IlcGenerateCompleteTypeMetadata>
+    <AutoreleasePoolSupport>false</AutoreleasePoolSupport>
+
+    <AssemblyTitle>PC Insight</AssemblyTitle>
+    <Product>PC Insight</Product>
+    <Company>PC Insight</Company>
+    <Version>1.0.0</Version>
+    <FileVersion>1.0.0.0</FileVersion>
+    <Copyright>Copyright © 2026</Copyright>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <NoWarn>$(NoWarn);CA1416;NU1701</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.9169" />
+    <PackageReference Include="Microsoft.Management.Infrastructure" Version="3.0.0" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.5.1" />
+  </ItemGroup>
+
+  <!--
+    Microsoft.WindowsAppSDK 2.5 pulls a large set of transitive components this app never uses:
+    the Windows AI/ML/Semantic Search stack, WebView2, plus CLR diagnostics binaries copied by
+    the self-contained runtime pack and build-time-only .winmd metadata. Declaring ExcludeAssets
+    is not enough because the self-contained targets copy their content unconditionally, so the
+    payload is filtered here instead (filenames, RID-independent for win-x64 and win-arm64).
+  -->
+  <PropertyGroup>
+    <!-- Semicolon-wrapped so the exact-name test below never substring-matches (e.g. the
+         prefix "Microsoft.UI" must not match "Microsoft.UI.Designer"). -->
+    <PcInsightDropFileNames>;Microsoft.Asg.SemanticIndex.AiFabric.Compatibility;PerceptiveStreaming;Microsoft.Windows.Search;NPUDetect;Microsoft.ML.OnnxRuntime;onnxruntime;onnxruntime_providers_shared;DirectML;Microsoft.Web.WebView2.Core;WebView2Loader;Microsoft.UI.Designer;Microsoft.DiaSymReader.Native.amd64;Microsoft.DiaSymReader.Native.arm64;mscordbi;createdump;clrgcexp;clrgc;msquic;</PcInsightDropFileNames>
+  </PropertyGroup>
+
+  <Target Name="PcInsightRemoveUnusedPayload" AfterTargets="ComputeResolvedFilesToPublishList">
+    <ItemGroup>
+      <ResolvedFileToPublish
+        Remove="@(ResolvedFileToPublish)"
+        Condition="$(PcInsightDropFileNames.Contains(';%(Filename);'))
+          or $([System.String]::Copy('%(Filename)').StartsWith('Microsoft.Windows.AI'))
+          or $([System.String]::Copy('%(Filename)').StartsWith('Microsoft.Windows.Widgets'))
+          or $([System.String]::Copy('%(Filename)').StartsWith('Microsoft.Windows.Workloads'))
+          or $([System.String]::Copy('%(Filename)').StartsWith('mscordaccore'))
+          or ('%(Extension)' == '.winmd' and $([System.String]::Copy('%(Filename)').StartsWith('Microsoft.UI')))
+          or '%(Extension)' == '.pdb'" />
+    </ItemGroup>
+  </Target>
+
+  <!--
+    The self-contained targets generate a registration-free WinRT manifest from every component
+    package's appx fragment (CreateWinRTRegistration -> Manifests\app.manifest, embedded in the
+    exe). That list is built independently of ResolvedFileToPublish, so the DLLs removed above are
+    still declared as <asmv3:file> entries. In a single-file bundle each entry is redirected with
+    loadFrom=%MICROSOFT_WINDOWSAPPRUNTIME_BASE_DIRECTORY%; pointing at a missing file breaks the
+    activation context wholesale and every WinRT factory fails (0x80040111, including
+    Microsoft.UI.Xaml.Application). Strip the same entries from the generated manifest.
+  -->
+  <UsingTask TaskName="PcInsightFilterRegFreeManifest" TaskFactory="RoslynCodeTaskFactory"
+             AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <ManifestPath ParameterType="System.String" Required="true" />
+      <DropFileNames ParameterType="System.String" Required="true" />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System.IO" />
+      <Using Namespace="System.Linq" />
+      <Using Namespace="System.Xml" />
+      <Code Type="Fragment" Language="cs">
+        <![CDATA[
+            var drop = new HashSet<string>(
+                DropFileNames.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries),
+                StringComparer.OrdinalIgnoreCase);
+
+            var doc = new XmlDocument();
+            doc.PreserveWhitespace = true;
+            doc.Load(ManifestPath);
+            var nsmgr = new XmlNamespaceManager(doc.NameTable);
+            nsmgr.AddNamespace("asmv3", "urn:schemas-microsoft-com:asm.v3");
+
+            int removed = 0;
+            foreach (XmlNode node in doc.SelectNodes("//asmv3:file", nsmgr).Cast<XmlNode>().ToList())
+            {
+                var name = node.Attributes != null ? node.Attributes["name"] != null ? node.Attributes["name"].Value : null : null;
+                if (string.IsNullOrEmpty(name)) continue;
+                var fn = Path.GetFileNameWithoutExtension(name);
+                bool dropIt = drop.Contains(fn)
+                    || fn.StartsWith("Microsoft.Windows.AI", StringComparison.OrdinalIgnoreCase)
+                    || fn.StartsWith("Microsoft.Windows.Widgets", StringComparison.OrdinalIgnoreCase)
+                    || fn.StartsWith("Microsoft.Windows.Workloads", StringComparison.OrdinalIgnoreCase);
+                if (dropIt)
+                {
+                    node.ParentNode.RemoveChild(node);
+                    removed++;
+                }
+            }
+            if (removed > 0)
+            {
+                doc.Save(ManifestPath);
+                Log.LogMessage("PcInsight removed " + removed + " unused file entries from the RegFree WinRT manifest");
+            }
+        ]]>
+      </Code>
+    </Task>
+  </UsingTask>
+
+  <Target Name="PcInsightFilterRegFreeManifestTarget"
+          AfterTargets="CreateWinRTRegistration"
+          BeforeTargets="CoreCompile">
+    <PcInsightFilterRegFreeManifest
+      ManifestPath="$(ApplicationManifest)"
+      DropFileNames="$(PcInsightDropFileNames)" />
+  </Target>
+
+  <ItemGroup>
+    <Content Include="Assets\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- The data layer is shared verbatim with the standalone verifier in tools/Probe. -->
+  <Import Project="Core.projitems" Label="Shared data layer" />
+
+</Project>

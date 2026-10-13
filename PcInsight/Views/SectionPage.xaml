@@ -1,0 +1,30 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="PcInsight.Views.SectionPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!--
+        The cards, tables and item rows are composed in code-behind (SectionPage.xaml.cs) so that
+        the layout can be built from the scanned data. Only the outer host lives in markup.
+    -->
+    <Grid>
+        <StackPanel x:Name="CardsPanel" Margin="12,4,12,0" Spacing="0" />
+
+        <StackPanel
+            x:Name="EmptyPanel"
+            Margin="28,60"
+            HorizontalAlignment="Center"
+            Spacing="10"
+            Visibility="Collapsed">
+            <FontIcon
+                HorizontalAlignment="Center"
+                FontSize="34"
+                Foreground="{ThemeResource SubtleTextBrush}"
+                Glyph="&#xE946;" />
+            <TextBlock
+                HorizontalAlignment="Center"
+                Foreground="{ThemeResource SubtleTextBrush}"
+                Text="{Binding L[status.noData]}" />
+        </StackPanel>
+    </Grid>
+</UserControl>

@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="PcInsight.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid x:Name="RootGrid" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- ============================ custom title bar ============================ -->
+        <!-- Right padding reserves room for the system min/max/close buttons (3 x 46 DIP). -->
+        <Grid x:Name="AppTitleBar" Grid.Row="0" Height="52" Padding="16,0,144,0" Background="Transparent">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <Image Grid.Column="0" Width="24" Height="24" VerticalAlignment="Center" Source="ms-appx:///Assets/Square44x44Logo.png" />
+
+            <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center" Orientation="Horizontal" Spacing="10">
+                <TextBlock FontSize="14" FontWeight="SemiBold" Text="{Binding L[app.title]}" />
+                <TextBlock x:Name="TitleSubtitle" FontSize="12" Foreground="{ThemeResource SubtleTextBrush}" VerticalAlignment="Center" />
+            </StackPanel>
+
+            <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                <AutoSuggestBox
+                    x:Name="SearchBox"
+                    Width="220"
+                    QueryIcon="Find"
+                    PlaceholderText="{Binding L[status.searchPlaceholder]}"
+                    TextChanged="OnSearchTextChanged" />
+
+                <Button x:Name="RescanButton" Click="OnRescanClick">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon FontSize="14" Glyph="&#xE72C;" />
+                        <TextBlock Text="{Binding L[action.refresh]}" />
+                    </StackPanel>
+                </Button>
+
+                <Button x:Name="ExportButton" Click="OnExportClick">
+                    <Button.Flyout>
+                        <MenuFlyout Placement="BottomEdgeAlignedRight">
+                            <MenuFlyoutItem Text="{Binding L[action.exportJson]}" Click="OnExportJsonClick" />
+                            <MenuFlyoutItem Text="{Binding L[action.exportText]}" Click="OnExportTextClick" />
+                            <MenuFlyoutSeparator />
+                            <MenuFlyoutItem Text="{Binding L[action.copy]}" Click="OnCopyClick" />
+                        </MenuFlyout>
+                    </Button.Flyout>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon FontSize="14" Glyph="&#xEDE1;" />
+                        <TextBlock Text="{Binding L[action.exportJson]}" />
+                    </StackPanel>
+                </Button>
+
+                <Button x:Name="LanguageButton" Click="OnLanguageClick">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon FontSize="14" Glyph="&#xF2B7;" />
+                        <TextBlock Text="{Binding L[action.language]}" />
+                    </StackPanel>
+                    <Button.Flyout>
+                        <MenuFlyout Placement="BottomEdgeAlignedRight">
+                            <RadioMenuFlyoutItem x:Name="LangZh" Text="中文" GroupName="lang" Click="OnLanguageZh" />
+                            <RadioMenuFlyoutItem x:Name="LangEn" Text="English" GroupName="lang" Click="OnLanguageEn" />
+                        </MenuFlyout>
+                    </Button.Flyout>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <!-- ============================ scan progress ============================ -->
+        <StackPanel x:Name="ScanPanel" Grid.Row="1" Margin="16,0,16,6" Spacing="4" Visibility="Collapsed">
+            <ProgressBar x:Name="ScanBar" IsIndeterminate="True" />
+            <TextBlock x:Name="ScanText" FontSize="12" Foreground="{ThemeResource SubtleTextBrush}" Text="{Binding L[status.scanning]}" />
+        </StackPanel>
+
+        <!-- ============================ navigation + content ============================ -->
+        <NavigationView
+            x:Name="Nav"
+            Grid.Row="2"
+            HorizontalAlignment="Stretch"
+            HorizontalContentAlignment="Stretch"
+            IsBackButtonVisible="Collapsed"
+            IsSettingsVisible="False"
+            IsPaneToggleButtonVisible="True"
+            OpenPaneLength="248"
+            PaneDisplayMode="Left"
+            SelectionChanged="OnNavSelectionChanged">
+
+            <NavigationView.MenuItems>
+                <NavigationViewItemSeparator />
+            </NavigationView.MenuItems>
+
+            <ScrollViewer
+                x:Name="ContentScroller"
+                Padding="4,0,4,16"
+                HorizontalAlignment="Stretch"
+                HorizontalScrollMode="Disabled"
+                HorizontalScrollBarVisibility="Disabled"
+                VerticalScrollBarVisibility="Auto"
+                VerticalScrollMode="Auto">
+                <views:SectionPage x:Name="SectionView" HorizontalAlignment="Stretch" xmlns:views="using:PcInsight.Views" />
+            </ScrollViewer>
+        </NavigationView>
+
+        <!-- ============================ status bar ============================ -->
+        <Grid Grid.Row="3" Padding="16,6" Background="{ThemeResource HeroBackgroundBrush}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock x:Name="StatusText" FontSize="12" Foreground="{ThemeResource SubtleTextBrush}" Text="{Binding L[status.ready]}" />
+            <TextBlock x:Name="StatusRight" Grid.Column="1" FontSize="12" Foreground="{ThemeResource SubtleTextBrush}" />
+        </Grid>
+    </Grid>
+</Window>

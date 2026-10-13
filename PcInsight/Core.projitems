@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The data layer is shared between the WinUI 3 app (PcInsight.csproj) and the standalone
+  console verifier (tools/Probe/Probe.csproj). It deliberately depends only on the BCL
+  plus WMI/registry P/Invokes, so both hosts can compile exactly the same sources.
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)Core\Strings.cs" Link="Core\Strings.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Core\Localization.cs" Link="Core\Localization.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Core\Model.cs" Link="Core\Model.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Core\Format.cs" Link="Core\Format.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Core\UiLog.cs" Link="Core\UiLog.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Core\Native.cs" Link="Core\Native.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Core\Wmi.cs" Link="Core\Wmi.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Core\SysInfo.cs" Link="Core\SysInfo.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Core\Lookup.cs" Link="Core\Lookup.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Core\Hardware.cs" Link="Core\Hardware.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Core\Hardware2.cs" Link="Core\Hardware2.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Core\Software.cs" Link="Core\Software.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Core\PcInfo.cs" Link="Core\PcInfo.cs" />
+  </ItemGroup>
+</Project>
